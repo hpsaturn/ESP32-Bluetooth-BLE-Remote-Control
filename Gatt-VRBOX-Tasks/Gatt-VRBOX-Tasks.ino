@@ -35,17 +35,12 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic warning "-fpermissive"
+#include <Arduino.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "controller.h"
-#include "bt.h"
-#include "bt_trace.h"
-#include "bt_types.h"
-#include "btm_api.h"
-#include "bta_api.h"
-#include "bta_gatt_api.h"
+#include <esp_bt.h>
 #include "esp_gap_ble_api.h"
 #include "esp_gattc_api.h"
 #include "esp_gatt_defs.h"
@@ -54,7 +49,7 @@
 #pragma GCC diagnostic pop
 
 // uncomment to see all of the Bluetooth debug messages
-//#define VERBOSE
+#define VERBOSE
 
 // Each defined task requires its own dedicated RAM allocation for its stack
 // How much RAM to allocate is determined by how nested the task is and how
@@ -75,7 +70,7 @@
 // ===== Allocate GPIO of the ESP32 =====
 #define LED           2         // built-in blue LED, high -> on, low -> off
 #define BLUELED       15        // lit -> connected
-#define GREENLED      5         // lit -> scanning
+#define GREENLED      22        // lit -> scanning
 #define REDLED        4
 
 #define SCL           22        // I2C SCL
@@ -100,9 +95,11 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
 static void gattc_hid_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
 static void gattc_battery_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
+static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param, int idx);
+void StartScan(void);
 
 // name of BLE server that you want to connect to
-static const char device_name[] = "VR BOX";
+static const char device_name[] = "VR-PARK";
 static bool connect = false;
 
 // BLE scan params
@@ -412,7 +409,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
           Serial.printf("GATT Opening Battery service: %d\n", profiles[BATTERY_PROFILE].gattc_if);
         #endif
         
-        esp_ble_gattc_open(profiles[BATTERY_PROFILE].gattc_if, profiles[BATTERY_PROFILE].remote_bda, true);
+        esp_ble_gattc_open(profiles[BATTERY_PROFILE].gattc_if, profiles[BATTERY_PROFILE].remote_bda,BLE_ADDR_TYPE_PUBLIC,true);
       }
       
       break;
@@ -579,7 +576,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 #ifdef VERBOSE
                   Serial.printf("GAP Opening HID service: %d\n", profiles[HID_PROFILE].gattc_if);
                 #endif
-                esp_ble_gattc_open(profiles[HID_PROFILE].gattc_if, scan_result->scan_rst.bda, true);
+                esp_ble_gattc_open(profiles[HID_PROFILE].gattc_if, scan_result->scan_rst.bda,BLE_ADDR_TYPE_PUBLIC,true);
               }
             }
           }
